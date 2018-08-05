@@ -31,7 +31,6 @@ void loop() {
   double sensorVcc = 5.15;
   double sensorZeroVcc = sensorVcc / 2.0;
   
-  //double voltage = raw * internalVcc * 1000 / 1024;
   double pinVcc= raw / 1024.0 * teensyVcc;
   double amperage = (pinVcc - sensorZeroVcc) * 1000 / MV_PER_AMP;
 
