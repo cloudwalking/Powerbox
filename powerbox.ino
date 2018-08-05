@@ -22,11 +22,17 @@ void loop() {
   }
   strip.show();
 
-  Serial.print("A1: :");
-  Serial.print(analogRead(A1));
-  Serial.print("\t");
+  for (int sensor = 0; sensor < 6; sensor++) {
+    double amperage = readACS711(sensor);
+    Serial.printf("A%d: %f\t", sensor, amperage);
+  }
+  Serial.println("");
 
-  int raw = analogRead(A0);
+  delay(500);
+}
+
+double readACS711(int pin) {
+  int raw = analogRead(pin);
   double teensyVcc = 3.3;
   double sensorVcc = 5.15;
   double sensorZeroVcc = sensorVcc / 2.0;
@@ -34,13 +40,6 @@ void loop() {
   double pinVcc= raw / 1024.0 * teensyVcc;
   double amperage = (pinVcc - sensorZeroVcc) * 1000 / MV_PER_AMP;
 
-  Serial.print("Raw: ");
-  Serial.print(raw);
-  Serial.print("\tVpin: ");
-  Serial.print(pinVcc , 3);
-  Serial.print("\tAh: ");
-  Serial.print(amperage, 3);
-  Serial.println("");
-  delay(1000);
+  return amperage;
 }
 
