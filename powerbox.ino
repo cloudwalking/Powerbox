@@ -118,24 +118,30 @@ void updateLEDs() {
 
     // Pick a hue based on amperage.
     uint8_t hue = 0;
+    uint8_t vibrance = 0;
     if (amps < 0.5) {
       // Green
       hue = 77;
+      vibrance = 150;
     } else if (amps < 1.0) {
       // Teal
       hue = 122;
+      vibrance = 175;
     } else if (amps < 2.0) {
       // Blue
-      hue = 170;
+      hue = 155;
+      vibrance = 200;
     } else {
       // Purple
-      hue = 220;
+      hue = 224;
+      vibrance = 230;
     }
 
     // For a nice sparkle effect -- pick colors from the bottom color up
     // to the color for current amperage.
-    hue = random(max(77, hue - 25), hue);
-    _leds[sensor] = CHSV(hue, 255, random(150, 200));
+    hue = random(max(77, hue - 10), hue + 10);
+    vibrance = random(vibrance - 25, vibrance + 25);
+    _leds[sensor] = CHSV(hue, 255, vibrance);
 
     // Schedule the next update based on our frequency.
     float ampInterpolation =  minFrequency + (ampFraction * rangeFrequency);
