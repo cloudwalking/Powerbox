@@ -94,59 +94,65 @@ unsigned long _nextLEDUpdateTime[NUM_SENSORS] = { 0 };
 
 void updateLEDs() {
   const uint8_t minFrequency = 10;
-  const uint8_t maxFrequency = 50;
+  const uint8_t maxFrequency = 200;
   const uint8_t rangeFrequency = maxFrequency - minFrequency;
-  const float maxAmps = 1.0; // 5.0 in reality.
+  // Just used for scaling the animation intensity.
+  const float maxAmps = 3.0;
   
   for (int sensor = 0; sensor < NUM_SENSORS; sensor++) {
-    unsigned long currentTime = millis();
-    if (currentTime < _nextLEDUpdateTime[sensor]) {
-      // Not enough time has passed to update this sensor.
-      continue;
-    }
-
     // Get the current reading as a fraction between 0 amps and 5 amps.
     float amps = _sensorAmps[sensor];
     float ampFraction = amps / maxAmps;
 //Serial.printf("* A%d: %f\t", sensor, ampFraction);
 
-    // Anything below 125 mA we consider sensor noise.
-    if (amps < 0.125) {
+    // Anything below 150 mA we consider sensor noise.
+    if (amps < 0.150) {
       _leds[sensor] = CRGB::Black;
       continue;
     }
 
     // Pick a hue based on amperage.
     uint8_t hue = 0;
-    uint8_t vibrance = 0;
+    uint8_t vibrance = 255;
+    uint8_t saturation = 255;
+    uint8_t speedy = 0;
     if (amps < 0.5) {
       // Green
-      hue = 77;
-      vibrance = 150;
+      hue = 96;
+      saturation = 250;
+      speedy = 40;
     } else if (amps < 1.0) {
       // Teal
-      hue = 122;
-      vibrance = 175;
+      hue = 128;
+      speedy = 56;
     } else if (amps < 2.0) {
       // Blue
-      hue = 155;
-      vibrance = 200;
+      hue = 160;
+      speedy = 80;
     } else {
       // Purple
-      hue = 224;
-      vibrance = 230;
+      hue = 210;
+      speedy = 96;
     }
 
-    // For a nice sparkle effect -- pick colors from the bottom color up
-    // to the color for current amperage.
-    hue = random(max(77, hue - 10), hue + 10);
-    vibrance = random(vibrance - 25, vibrance + 25);
+    // For sparkle effect -- pick colors around the hue + vibrance around the vibrance.
+//    hue = random(max(77, hue - 10), hue + 10);
+//    hue = beatsin8(90, hue - 10, hue + 10);
+//    vibrance = random(vibrance - 10, vibrance + 10);
+//    saturation = random(saturation, 255);
+    vibrance = beatsin8(speedy, 200, vibrance);
     _leds[sensor] = CHSV(hue, 255, vibrance);
 
+    // Not enough time has passed to update this sensor.
+//    unsigned long currentTime = millis();
+//    if (currentTime < _nextLEDUpdateTime[sensor]) {
+//      continue;
+//    }
+
     // Schedule the next update based on our frequency.
-    float ampInterpolation =  minFrequency + (ampFraction * rangeFrequency);
-    int flickerFrequency = 1000 / ampInterpolation;
-    _nextLEDUpdateTime[sensor] = currentTime + flickerFrequency; 
+//    float ampInterpolation =  minFrequency + (ampFraction * rangeFrequency);
+//    int flickerFrequency = 1000 / ampInterpolation;
+//    _nextLEDUpdateTime[sensor] = currentTime + flickerFrequency; 
   }
 //  Serial.println("");
   
