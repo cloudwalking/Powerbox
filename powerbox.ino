@@ -16,6 +16,7 @@ CRGB _leds[NUM_SENSORS];
 //////////////////////////////////////////////////////
 
 void setup() {
+  delay(2000);
   pinMode(PIN_ONBOARD_LED , OUTPUT);
   digitalWrite(PIN_ONBOARD_LED , HIGH);
 
@@ -28,7 +29,7 @@ void setup() {
 }
 
 void loop() {
-  EVERY_N_MILLISECONDS(50) {
+  EVERY_N_MILLISECONDS(15) {
     fillBuffer();
   }
 
@@ -43,7 +44,7 @@ void loop() {
 
 int _bufferFrame = 0;
 double _buffer[NUM_SENSORS][BUFFER_SIZE] = { 0 };
-double _amperageRead[NUM_SENSORS] = { 0 };
+double _sensorAmps[NUM_SENSORS] = { 0 };
 
 void fillBuffer() {
   // Fill the buffer with a new reading.
@@ -59,20 +60,27 @@ void fillBuffer() {
     for (int frame = 0; frame < BUFFER_SIZE; frame++) {
        total += _buffer[sensor][frame];
     }
-    _amperageRead[sensor] = total / BUFFER_SIZE;
-//    Serial.printf("A%d: %f\t", sensor, _amperageRead[sensor]);
+    _sensorAmps[sensor] = total / BUFFER_SIZE;
+    Serial.printf("+ A%d: %f\t", sensor, _sensorAmps[sensor]);
   }
-//  Serial.println("");
+  Serial.println("");
 }
 
 double readACS711(int pin) {
-  const double teensyVcc = 3.3;
-  const double sensorVcc = 5.15;
+  // USB handicaps
+//  const int handicap[NUM_SENSORS] = { 0, 1, 3, -2, 0, -11 };
+  // 12V handicaps
+  const int handicap[NUM_SENSORS] = { -8, -9, -6, -10, -9, -22 };
+  
+  const double teensyVcc = 3.34;
+  const double sensorVcc = 5.08; //5.08 12v //5.15 usb
   const double sensorZeroVcc = sensorVcc / 2.0;
 
   int raw = analogRead(pin);
-  double pinVcc= raw / 1024.0 * teensyVcc;
+  int withHandicap = raw + handicap[pin];
+  double pinVcc= (withHandicap / 1024.0) * teensyVcc;
   double amperage = (pinVcc - sensorZeroVcc) * 1000 / MV_PER_AMP;
+//  Serial.printf("\t raw: %d\t with_handi: %d\t pin: %f\t amperage: %f\n", raw, withHandicap, pinVcc, amperage);
 
   return amperage;
 }
@@ -98,27 +106,43 @@ void updateLEDs() {
     }
 
     // Get the current reading as a fraction between 0 amps and 5 amps.
-    float amps = _amperageRead[sensor];
+    float amps = _sensorAmps[sensor];
     float ampFraction = amps / maxAmps;
-Serial.printf("A%d: %f\t", sensor, amps);
-    // Anything below 10 mA we consider sensor noise.
-    if (amps < 0.01) {
+//Serial.printf("* A%d: %f\t", sensor, ampFraction);
+
+    // Anything below 125 mA we consider sensor noise.
+    if (amps < 0.125) {
       _leds[sensor] = CRGB::Black;
       continue;
     }
 
-    // Color range is Hue 359 (starting, low power) to Hue 300 (ending, highest power).
-    // Translate into FastLED world where Hue max is 255, we get 255 to 213.
-    uint8_t hue = 213 + (42 * (1 - ampFraction));
-//    Serial.printf("A%d: %d\t", sensor, hue);
-    _leds[sensor] = CHSV(hue, 255, random(100, 200));
+    // Pick a hue based on amperage.
+    uint8_t hue = 0;
+    if (amps < 0.5) {
+      // Green
+      hue = 77;
+    } else if (amps < 1.0) {
+      // Teal
+      hue = 122;
+    } else if (amps < 2.0) {
+      // Blue
+      hue = 170;
+    } else {
+      // Purple
+      hue = 220;
+    }
+
+    // For a nice sparkle effect -- pick colors from the bottom color up
+    // to the color for current amperage.
+    hue = random(max(77, hue - 25), hue);
+    _leds[sensor] = CHSV(hue, 255, random(150, 200));
 
     // Schedule the next update based on our frequency.
     float ampInterpolation =  minFrequency + (ampFraction * rangeFrequency);
     int flickerFrequency = 1000 / ampInterpolation;
     _nextLEDUpdateTime[sensor] = currentTime + flickerFrequency; 
   }
-  Serial.println("");
+//  Serial.println("");
   
   FastLED.show();
 }
